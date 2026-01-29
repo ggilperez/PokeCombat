@@ -11,6 +11,10 @@ from .battle_engine import run_simulation_batch, run_type_simulation
 
 app = FastAPI(title="PokeCombat")
 
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to PokeCombat API! Visit /docs for documentation."}
+
 @app.get("/pokemons")
 def get_pokemons_list(): # Renamed to avoid name collision with database function
     from .database import get_all_pokemons
