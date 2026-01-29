@@ -6,7 +6,7 @@ from .models import Pokemon, Move
 TYPE_CHART = {
     "normal": {"rock": 0.5, "ghost": 0.0, "steel": 0.5},
     "fire": {"fire": 0.5, "water": 0.5, "grass": 2.0, "ice": 2.0, "bug": 2.0, "rock": 0.5, "dragon": 0.5, "steel": 2.0},
-    "water": {"fire": 2.0, "water": 0.5, "grass": 0.5, "ground": 2.0, "rock": 2.0, "dragon": 0.5},
+    "water": {"fire": 2.0, "water": 2.0, "grass": 0.5, "ground": 2.0, "rock": 2.0, "dragon": 0.5},
     "grass": {"fire": 0.5, "water": 2.0, "grass": 0.5, "poison": 0.5, "ground": 2.0, "flying": 0.5, "bug": 0.5, "rock": 2.0, "dragon": 0.5, "steel": 0.5},
     "electric": {"water": 2.0, "electric": 0.5, "grass": 0.5, "ground": 0.0, "flying": 2.0, "dragon": 0.5},
     "ice": {"fire": 0.5, "water": 0.5, "grass": 2.0, "ice": 0.5, "ground": 2.0, "flying": 2.0, "dragon": 2.0, "steel": 0.5},
@@ -76,9 +76,9 @@ class Battle:
         self.turn += 1
 
     def perform_move(self, attacker: Pokemon, defender: Pokemon):
+        # If no moves, struggle
         if not attacker.moves:
-             self.log.append(f"{attacker.name} tried to attack but has no moves!")
-             # Struggle damage or 1?
+             # self.log.append(f"{attacker.name} tried to attack but has no moves!")
              defender.stats.hp -= 1
              return
 
@@ -86,7 +86,7 @@ class Battle:
         
         damage = self.calculate_damage(attacker, defender, move)
         defender.stats.hp -= damage
-        self.log.append(f"{attacker.name} used {move.name}! Dealt {damage} damage. {defender.name} HP: {max(0, defender.stats.hp)}")
+        # self.log.append(f"{attacker.name} used {move.name}! Dealt {damage} damage. {defender.name} HP: {max(0, defender.stats.hp)}")
 
     def run(self) -> str:
         while self.p1.stats.hp > 0 and self.p2.stats.hp > 0:
@@ -108,3 +108,40 @@ def run_simulation_batch(p1: Pokemon, p2: Pokemon, n=100) -> Dict[str, int]:
         winner = battle.run()
         results[winner] += 1
     return results
+
+def run_type_simulation(attacker: Pokemon, defender_type: str, all_defenders: List[Pokemon]) -> Dict[str, any]:
+    """
+    Run simulations against all pokemon of a specific type.
+    Returns aggregated stats.
+    """
+    total_battles = 0
+    total_wins = 0
+    
+    breakdown = []
+    
+    for defender in all_defenders:
+        # Run small batch against each defender (e.g. 10 times to get average result)
+        # Using 10 instead of 100 to save time if there are many defenders
+        BATCH_SIZE = 10 
+        stats = run_simulation_batch(attacker, defender, n=BATCH_SIZE)
+        
+        wins = stats.get(attacker.name, 0)
+        total_wins += wins
+        total_battles += BATCH_SIZE
+        
+        win_rate = (wins / BATCH_SIZE) * 100
+        breakdown.append({
+            "opponent": defender.name,
+            "win_rate": f"{win_rate}%"
+        })
+        
+    global_win_rate = (total_wins / total_battles * 100) if total_battles > 0 else 0
+    
+    return {
+        "attacker": attacker.name,
+        "vs_type": defender_type,
+        "global_win_rate": f"{global_win_rate:.2f}%",
+        "total_battles": total_battles,
+        "opponents_count": len(all_defenders),
+        "breakdown_sample": breakdown[:5] # Show first 5 matches as sample
+    }
